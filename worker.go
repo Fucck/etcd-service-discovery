@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
-	client "go.etcd.io/etcd/clientv3"
+	client "github.com/coreos/etcd/clientv3"
+	"go.etcd.io/etcd/clientv3/concurrency"
 	"log"
 	"time"
 )
@@ -28,6 +29,42 @@ func NewWorker(instanceName string, endPoints []string) *Worker {
 	return &Worker{
 		InstanceName: instanceName,
 		cli: cli,
+	}
+}
+
+// campaign leader
+func (w *Worker) Campaign(election, prop string) {
+	session, err := concurrency.NewSession(w.cli, concurrency.WithTTL(5))
+	defer session.Close()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	e := concurrency.NewElection(session, election)
+	ctx := context.Background()
+	for {
+		leader, err := e.Leader(ctx)
+		if err != nil {
+			log.Println("get leader error:", err)
+		} else {
+			log.Println("now leader is: ", string(leader.Kvs[0].Value))
+			if string(leader.Kvs[0].Value) == prop { // I am leader, go straight to the end of function
+				log.Println("I'am the leader")
+				goto waitForNextCircle
+			}
+		}
+
+		if err = e.Campaign(ctx, prop); err != nil {
+			log.Println(err)
+			return
+		}
+
+		log.Printf("Now %s is leader", w.InstanceName)
+		log.Println(e.Key())
+
+		waitForNextCircle:
+		time.Sleep(10 * time.Second)
 	}
 }
 

@@ -24,6 +24,7 @@ func main() {
 		master.WatchWorkers(*key)
 	case "worker":
 		worker := NewWorker(*name, endpoints)
+		go worker.Campaign("electionDemo", *name)
 		worker.HeartBeats(*key)
 	default:
 		os.Exit(-1)

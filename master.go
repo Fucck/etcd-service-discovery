@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	client "go.etcd.io/etcd/clientv3"
+	client "github.com/coreos/etcd/clientv3"
 	"log"
 	"strings"
 	"time"
@@ -76,7 +76,7 @@ func MemberUnmarshal(content []byte) *Member {
 }
 
 func (m *Master) ShowInstance() {
-	instanceNames := []string{}
+	instanceNames := make([]string, 0)
 	for _, member := range m.members {
 		instanceNames = append(instanceNames, member.InstanceName)
 	}
